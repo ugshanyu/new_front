@@ -1,229 +1,200 @@
-.main {
+.container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Modern sans-serif font */
+}
+
+.sidebar {
+  width: 240px;
+  background: #043930; /* Dark Blue: Dominant logo color for the sidebar */
+  color: #0262fe; /* White text for contrast and readability */
+  overflow-y: auto;
+  flex-shrink: 0;
+  /*background: linear-gradient(145deg, #002f6c, #0057b8); !* Darker gradient for contrast *!*/
+}
+
+.contact {
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.contact:hover, .contact.active {
+  background-color: #074e41; /* Bright Blue: For hover and active states */
+}
+
+.chat {
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6rem;
-  min-height: 100vh;
 }
 
-.description {
-  display: inherit;
-  justify-content: inherit;
-  align-items: inherit;
-  font-size: 0.85rem;
-  max-width: var(--max-width);
-  width: 100%;
-  z-index: 2;
-  font-family: var(--font-mono);
-}
-
-.description a {
+.messages {
+  flex-grow: 1;
+  padding: 20px;
+  background: #023f33; /* Dark Blue: For message background */
+  color: #0262fe; /* White for text */
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  overflow-y: auto;
+  /*background: linear-gradient(145deg, #002f6c, #0057b8); !* Darker gradient for contrast *!*/
 }
 
-.description p {
-  position: relative;
-  margin: 0;
-  padding: 1rem;
-  background-color: rgba(var(--callout-rgb), 0.5);
-  border: 1px solid rgba(var(--callout-border-rgb), 0.3);
-  border-radius: var(--border-radius);
-}
-
-.code {
-  font-weight: 700;
-  font-family: var(--font-mono);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(25%, auto));
-  width: var(--max-width);
-  max-width: 100%;
-}
-
-.card {
-  padding: 1rem 1.2rem;
-  border-radius: var(--border-radius);
-  background: rgba(var(--card-rgb), 0);
-  border: 1px solid rgba(var(--card-border-rgb), 0);
-  transition: background 200ms, border 200ms;
-}
-
-.card span {
-  display: inline-block;
-  transition: transform 200ms;
-}
-
-.card h2 {
-  font-weight: 600;
-  margin-bottom: 0.7rem;
-}
-
-.card p {
-  margin: 0;
-  opacity: 0.6;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  max-width: 30ch;
-}
-
-.center {
+.messageInput {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  padding: 4rem 0;
+  padding: 10px;
+  background: #044035; /* Bright Blue: For input background */
 }
 
-.center::before {
-  background: var(--secondary-glow);
+.messageInput input {
+  flex-grow: 1;
+  padding: 10px;
+  margin-right: 10px;
+  border-radius: 4px;
+  border: none;
+  color: #fad24d; /* White text for contrast */
+  font-size: 16px;
+}
+
+.messageInput button {
+  padding: 10px 20px;
+  background: #06483c; /* Orange: For button background */
+  color: #fecb7e; /* White text */
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.messages::-webkit-scrollbar {
+  width: 7px; /* width of the entire scrollbar */
+}
+
+/* Style the handle (the part that can be dragged) */
+.messages::-webkit-scrollbar-thumb {
+  background-color: rgb(3, 50, 43); /* color of the scroll thumb */
+  border-radius: 6px; /* roundness of the scroll thumb */
+  border: 1px solid rgb(3, 50, 43); /* creates padding around the scroll thumb */
+}
+
+/* Style the scrollbar track (progress track) */
+.messages::-webkit-scrollbar-track {
+  background: #044035; /* color of the track */
+}
+
+.message {
+  padding: 10px;
+  margin-bottom: 10px; /* Space between messages */
+  border-radius: 4px;
+  max-width: 40%; /* Maximum width of the message bubble */
+  /*word-wrap: break-word; !* To prevent overflow if a long word is sent *!*/
+  /*overflow-wrap: break-word*/
+}
+
+.sentMessage {
+  align-self: flex-end;
+  background: #a3d39c; /* Orange: For sent messages */
+  color: #023f33;
+}
+
+.receivedMessage {
+  align-self: flex-start;
+  background: #fecb95; /* Yellow: For received messages */
+  color: #4d4b24;
+}
+
+
+/* Add any additional styles for responsiveness, colors, etc. as needed */
+/* ... (existing styles) ... */
+
+.avatar {
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
-  width: 480px;
-  height: 360px;
-  margin-left: -400px;
+  margin-right: 10px;
 }
 
-.center::after {
-  background: var(--primary-glow);
-  width: 240px;
-  height: 180px;
-  z-index: -1;
+.contactDetails {
+  display: flex;
+  flex-direction: row; /* Set to row to align children horizontally */
+  align-items: center;
 }
 
-.center::before,
-.center::after {
-  content: '';
-  left: 50%;
-  position: absolute;
-  filter: blur(45px);
-  transform: translateZ(0);
+.contactName {
+  font-weight: bold;
+  color: #fecb95;
 }
 
-.logo {
-  position: relative;
-}
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  .card:hover {
-    background: rgba(var(--card-rgb), 0.1);
-    border: 1px solid rgba(var(--card-border-rgb), 0.15);
-  }
-
-  .card:hover span {
-    transform: translateX(4px);
-  }
+.activeContact {
+  background-color: #06483c; /* Bright Blue: For hover and active states */
 }
 
-@media (prefers-reduced-motion) {
-  .card:hover span {
-    transform: none;
-  }
+.chatHeader {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: #04473a;
+  color: #0f2682;
 }
 
-/* Mobile */
-@media (max-width: 700px) {
-  .content {
-    padding: 4rem;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-    margin-bottom: 120px;
-    max-width: 320px;
-    text-align: center;
-  }
-
-  .card {
-    padding: 1rem 2.5rem;
-  }
-
-  .card h2 {
-    margin-bottom: 0.5rem;
-  }
-
-  .center {
-    padding: 8rem 0 6rem;
-  }
-
-  .center::before {
-    transform: none;
-    height: 300px;
-  }
-
-  .description {
-    font-size: 0.8rem;
-  }
-
-  .description a {
-    padding: 1rem;
-  }
-
-  .description p,
-  .description div {
-    display: flex;
-    justify-content: center;
-    position: fixed;
-    width: 100%;
-  }
-
-  .description p {
-    align-items: center;
-    inset: 0 0 auto;
-    padding: 2rem 1rem 1.4rem;
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid rgba(var(--callout-border-rgb), 0.25);
-    background: linear-gradient(
-      to bottom,
-      rgba(var(--background-start-rgb), 1),
-      rgba(var(--callout-rgb), 0.5)
-    );
-    background-clip: padding-box;
-    backdrop-filter: blur(24px);
-  }
-
-  .description div {
-    align-items: flex-end;
-    pointer-events: none;
-    inset: auto 0 0;
-    padding: 2rem;
-    height: 200px;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      rgb(var(--background-end-rgb)) 40%
-    );
-    z-index: 1;
-  }
+.activeContactHeader {
+  display: flex;
+  align-items: center;
 }
 
-/* Tablet and Smaller Desktop */
-@media (min-width: 701px) and (max-width: 1120px) {
-  .grid {
-    grid-template-columns: repeat(2, 50%);
-  }
+.messageContent {
+  /* Styles for the message text */
 }
 
-@media (prefers-color-scheme: dark) {
-  .vercelLogo {
-    filter: invert(1);
-  }
-
-  .logo {
-    filter: invert(1) drop-shadow(0 0 0.3rem #ffffff70);
-  }
+.messageTimestamp {
+  font-size: 0.75rem;
+  color: #999999;
+  text-align: right;
+  padding-top: 5px;
 }
 
-@keyframes rotate {
-  from {
-    transform: rotate(360deg);
-  }
-  to {
-    transform: rotate(0deg);
-  }
+.sentMessage {
+  /* Align to the right for sent messages */
+  justify-content: flex-end;
+  /*text-align: right;*/
 }
+
+.receivedMessage {
+  /* Align to the left for received messages */
+  /*text-align: left;*/
+}
+
+.messageInput input {
+  flex-grow: 1;
+  padding: 10px;
+  margin-right: 10px;
+  border-radius: 4px;
+  border: 1.7px solid #05584a; /* If you want a border */
+  background-color: #023f33; /* Dark Blue: For input background */
+  color: #fad24d; /* Gold/Yellow color for text */
+  outline: none; /* Removes the default focus outline */
+}
+
+/* Style the placeholder text */
+.messageInput input::placeholder {
+  color: #7a7a7a; /* Lighter shade for placeholder text */
+}
+
+/* Remove input background and text color on hover for better visibility */
+.messageInput input:hover {
+  background-color: #024e41; /* Slightly lighter background on hover */
+  color: #fad24d; /* Change text color on hover if needed */
+}
+
+/* Remove input background and text color on focus for better visibility */
+.messageInput input:focus {
+  background-color: #a4d39d; /* Brighter background on focus for emphasis */
+  color: #044035; /* Change text color on focus if needed */
+}
+
+/* You might want to add media queries for responsiveness */
+
+/* ... (additional styles as needed) ... */
