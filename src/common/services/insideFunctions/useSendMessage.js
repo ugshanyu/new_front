@@ -1,8 +1,9 @@
 // useSendMessage.js
-import {useCallback} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 
-export function useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage, type) {
+export function useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessagesHook, lastAutomatedMessage, type, bottomSimpleExport) {
     return useCallback(() => {
+        // console.log('useSendMessage', scrollToBottom);
         if (message && currentContact && webSocket) {
             const newMessage = {
                 from: myInfo?.name, text: message, recipientUserId: currentContact.id, recipientUserName: currentContact.username,
@@ -11,10 +12,10 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
                 automatedMessageType: lastAutomatedMessage?.automatedMessageType
             };
             webSocket.send(JSON.stringify(newMessage));
-            setMessages(prevMessages => ({
+            setMessagesHook(prevMessages => ({
                 ...prevMessages,
                 [currentContact.username]: [...(prevMessages[currentContact.username] || []), newMessage]
-            }));
+            }), currentContact.username);
             setMessage('');
         }
     }, [message, currentContact, webSocket]);
@@ -49,4 +50,23 @@ export function useGetContacts(webSocket) {
             webSocket.send(JSON.stringify(object));
         }
     }, [webSocket]);
+}
+
+export function bottomSimpleExport(dummyDiv){
+    dummyDiv.current?.scrollIntoView({ behavior: 'smooth' });
+}
+
+export function typing(webSocket, currentUsername, currentContact, isTyping, setWriting, isThinking) {
+    if (webSocket && currentContact && currentUsername && isTyping != null) {
+        setWriting(isTyping);
+        let object = { input: {isTyping: isTyping, isThinking: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
+        webSocket.send(JSON.stringify(object));
+    }
+}
+
+export function inputFocused(webSocket, currentUsername, currentContact, isThinking) {
+    if (webSocket && currentContact && currentUsername && isThinking != null) {
+        let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
+        webSocket.send(JSON.stringify(object));
+    }
 }

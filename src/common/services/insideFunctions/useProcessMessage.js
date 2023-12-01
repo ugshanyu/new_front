@@ -1,23 +1,25 @@
 import {useCallback, useEffect} from "react";
-import {useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
+import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged) {
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts) {
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
-            case 'UPDATE_ONLINE_USERS':
-                getContacts();
             case 'loginContact':
                 if (incomingMessage.contacts && incomingMessage.contacts.length > 0){
                     let loginContact = incomingMessage.contacts[0]
                     setCurrentContact(loginContact);
                     setContacts(incomingMessage.contacts);
                     setLastAutomatedMessage(loginContact?.greetingMessage);
+                    console.log('loginContact?.greetingMessage', loginContact?.greetingMessage)
                     setMessages(prevMessages => ({
                         ...prevMessages,
-                        [loginContact.id]: [...(prevMessages[loginContact.id] || []), loginContact?.greetingMessage ? loginContact?.greetingMessage : '']
+                        [loginContact.username]: [...(prevMessages[loginContact.username] || []), loginContact?.greetingMessage ? loginContact?.greetingMessage : '']
                     }));
                 }
+                break;
+            case 'UPDATE_ONLINE_USERS':
+                getContacts();
                 break;
             case 'updateContacts':
                 if (incomingMessage.contacts && incomingMessage.contacts.length > 0){
@@ -59,11 +61,38 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     }));
 
                 break;
+            case 'TYPING':
+                let typing = incomingMessage?.input?.isTyping;
+                let inputFocused = incomingMessage?.input?.inputFocused;
+                // console.log('typing', typing)
+                if(typing !== undefined) {
+                    contacts.forEach((contact) => {
+                        if (contact.username === incomingMessage?.from) {
+                            contact.typing = typing;
+                        }
+                    })
+                    if (currentContact?.username === incomingMessage?.from) {
+                        setCurrentContact({...currentContact, typing: typing});
+                    }
+                }
+                if(inputFocused !== undefined) {
+                    // console.log('inputFocused', inputFocused)
+                    contacts.forEach((contact) => {
+                        if (contact.username === incomingMessage?.from) {
+                            contact.inputFocused = inputFocused;
+                        }
+                    })
+                    if (currentContact?.username === incomingMessage?.from) {
+                        setCurrentContact({...currentContact, inputFocused: inputFocused});
+                    }
+                }
+
+                break;
             default:
                 // Handle unknown message type
                 console.warn('Received unknown message type:', incomingMessage.type);
         }
-    }, [setMessages, setCurrentContact, goLogin, getContacts, messageAcknowledged])
+    }, [setMessages, setCurrentContact, goLogin, getContacts, messageAcknowledged, currentContact, contacts]);
 
     useEffect(() => {
         if (webSocket) {

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import styles from './page.module.css';
 import {getLogin, login} from "@/common/services/apiCalls/login"
 import {getLogoUrl} from "@/common/utils/base";
-import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged} from "@/common/services/insideFunctions/useSendMessage";
+import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScrollToBottom, ScrollToBottom, bottomSimpleExport, typing, thinkingStatus, inputFocused} from "@/common/services/insideFunctions/useSendMessage";
 import process from "next/dist/build/webpack/loaders/resolve-url-loader/lib/postcss";
 import {useProcessMessage} from "@/common/services/insideFunctions/useProcessMessage";
 
@@ -17,13 +17,17 @@ export default function Home() {
     const [webSocket, setWebSocket] = useState(null);
     const [lastAutomatedMessage, setLastAutomatedMessage] = useState(null);
     const [wsConnected, setWsConnected] = useState(false);
+    const [writing, setWriting] = useState(false);
+    const [thinking, setThinking] = useState(false);
     const currentUsername = localStorage.getItem('username');
     const myInfo = { id: 0, name: currentUsername, avatar: getLogoUrl() };
     const goLogin = useLogin(webSocket);
+    const dummyDiv = useRef(null);
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
-    const processMessage = useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged);
+    const processMessage = useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts);
     const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
+    const typingTimer = useRef(null);
 
     useEffect(() => {
         if (webSocket) {
@@ -64,18 +68,52 @@ export default function Home() {
         localStorage.setItem('messages', JSON.stringify(messages));
     }, [messages]);
 
+    useEffect(() => {
+        bottomSimpleExport(dummyDiv);
+    }, [messages, currentContact]);
 
-    // const updateMessages = useCallback((update) => {
-    //     setMessages(prevMessages => {
-    //         // You can add custom logic here if needed
-    //         return { ...prevMessages, ...update };
-    //     });
-    // }, []);
-
+    useEffect(() => {
+        if (!writing && message !== '') {
+            typing(webSocket, currentUsername, currentContact, true, setWriting);
+        }
+        if(message !== '') {
+            typingTimer.current = setTimeout(() => {
+            typing(webSocket, currentUsername, currentContact, false, setWriting);
+            }, 1000);
+        } else {
+            typing(webSocket, currentUsername, currentContact, false, setWriting);
+        }
+        return () => clearTimeout(typingTimer.current);
+    }, [message]);
 
     const selectContact = useCallback((contact) => {
         setCurrentContact(contact);
     }, []);
+
+    useEffect(() => {
+        if(message === "") {
+            inputFocused(webSocket, currentUsername, currentContact, false);
+        } else {
+            inputFocused(webSocket, currentUsername, currentContact, thinking);
+        }
+    },[thinking, message]);
+
+    //focused is false then thinking is false
+    //if focused is true and writing is true then writing is true
+    //if focused is true and writing is false then thinking is true
+    const renderTypingStatus = () => {
+        // console.log("currentContact?.inputFocused", currentContact?.inputFocused)
+        // console.log("currentContact?.typing", currentContact?.typing)
+        if(currentContact?.inputFocused) {
+            if(currentContact?.typing) {
+                return <div className={styles.typing}>Typing...</div>
+            } else {
+                return <div className={styles.typing}>Thinking...</div>
+            }
+        } else {
+            return null;
+        }
+    }
 
 
     return (
@@ -117,6 +155,10 @@ export default function Home() {
                             )
                         );
                     })}
+                    {
+                        renderTypingStatus()
+                    }
+                    <div ref={dummyDiv}></div>
                 </div>
 
                 {currentContact && (
@@ -130,6 +172,8 @@ export default function Home() {
                                     sendMessage();
                                 }
                             }}
+                            onFocus={() => setThinking(true)}
+                            onBlur={() => setThinking(false)}
                             placeholder="Type a message..."
                         />
                         <button onClick={sendMessage}>Send</button>
