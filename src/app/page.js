@@ -4,7 +4,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import styles from './page.module.css';
 import {getLogin, login} from "@/common/services/apiCalls/login"
 import {getLogoUrl} from "@/common/utils/base";
-import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScrollToBottom, ScrollToBottom, bottomSimpleExport, typing, thinkingStatus, inputFocused} from "@/common/services/insideFunctions/useSendMessage";
+import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScrollToBottom, ScrollToBottom, bottomSimpleExport, typing, thinkingStatus, sendInputFocused} from "@/common/services/insideFunctions/useSendMessage";
 import process from "next/dist/build/webpack/loaders/resolve-url-loader/lib/postcss";
 import {useProcessMessage} from "@/common/services/insideFunctions/useProcessMessage";
 
@@ -19,15 +19,37 @@ export default function Home() {
     const [wsConnected, setWsConnected] = useState(false);
     const [writing, setWriting] = useState(false);
     const [thinking, setThinking] = useState(false);
+    const [inputFocused, setInputFocused] = useState(false)
+    const [currentContactMessages, setCurrentContactMessages] = useState([]);
     const currentUsername = localStorage.getItem('username');
     const myInfo = { id: 0, name: currentUsername, avatar: getLogoUrl() };
     const goLogin = useLogin(webSocket);
     const dummyDiv = useRef(null);
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
-    const processMessage = useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts);
+    const processMessage = useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages);
     const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
     const typingTimer = useRef(null);
+
+    useEffect(() => {
+        if (currentContact && messages[currentContact.username]) {
+            setCurrentContactMessages(messages[currentContact.username]);
+        } else {
+            setCurrentContactMessages([]);
+        }
+    }, [messages, currentContact]);
+
+    useEffect(() => {
+        // messages[currentContact.username] = currentContactMessages
+        // setMessages(messages)
+        // messages.map(message => {
+        //     if (message.id === currentContact.username) {
+        //         return { ...message, stateType: incomingMessage.stateType };
+        //     }
+        //     return message;
+        // });
+    }, [currentContactMessages])
+
 
     useEffect(() => {
         if (webSocket) {
@@ -70,7 +92,7 @@ export default function Home() {
 
     useEffect(() => {
         bottomSimpleExport(dummyDiv);
-    }, [messages, currentContact]);
+    }, [currentContactMessages, currentContact]);
 
     useEffect(() => {
         if (!writing && message !== '') {
@@ -78,9 +100,13 @@ export default function Home() {
         }
         if(message !== '') {
             typingTimer.current = setTimeout(() => {
-            typing(webSocket, currentUsername, currentContact, false, setWriting);
+                typing(webSocket, currentUsername, currentContact, false, setWriting);
             }, 1000);
+            if(!thinking){
+                setThinking(true)
+            }
         } else {
+            setThinking(false)
             typing(webSocket, currentUsername, currentContact, false, setWriting);
         }
         return () => clearTimeout(typingTimer.current);
@@ -91,12 +117,12 @@ export default function Home() {
     }, []);
 
     useEffect(() => {
-        if(message === "") {
-            inputFocused(webSocket, currentUsername, currentContact, false);
+        if(thinking){
+            sendInputFocused(webSocket, currentUsername, currentContact, inputFocused);
         } else {
-            inputFocused(webSocket, currentUsername, currentContact, thinking);
+            sendInputFocused(webSocket, currentUsername, currentContact, false);
         }
-    },[thinking, message]);
+    },[inputFocused, thinking]);
 
     //focused is false then thinking is false
     //if focused is true and writing is true then writing is true
@@ -143,21 +169,36 @@ export default function Home() {
                         </div>
                     )}
                 </header>
+                {/*<div className={styles.messages}>*/}
+                {/*    {currentContact && messages[currentContact.username]?.length > 0 && messages[currentContact.username]?.map((msg, index) => {*/}
+                {/*        const isSentMessage = msg?.from === currentUsername;*/}
+                {/*        return (*/}
+                {/*            msg.text && (*/}
+                {/*                <div key={index} className={`${styles.message} ${isSentMessage ? styles.sentMessage : styles.receivedMessage}`}>*/}
+                {/*                    <div className={styles.messageContent}>{msg.text}</div>*/}
+                {/*                    /!*<div className={styles.messageTimestamp}>{msg.timestamp}</div>*!/*/}
+                {/*                </div>*/}
+                {/*            )*/}
+                {/*        );*/}
+                {/*    })}*/}
+                {/*    {*/}
+                {/*        renderTypingStatus()*/}
+                {/*    }*/}
+                {/*    <div ref={dummyDiv}></div>*/}
+                {/*</div>*/}
                 <div className={styles.messages}>
-                    {currentContact && messages[currentContact.username]?.length > 0 && messages[currentContact.username]?.map((msg, index) => {
+                    {currentContactMessages.map((msg, index) => {
                         const isSentMessage = msg?.from === currentUsername;
                         return (
                             msg.text && (
                                 <div key={index} className={`${styles.message} ${isSentMessage ? styles.sentMessage : styles.receivedMessage}`}>
                                     <div className={styles.messageContent}>{msg.text}</div>
-                                    {/*<div className={styles.messageTimestamp}>{msg.timestamp}</div>*/}
+                                    <div className={styles.messageStatus}>{msg?.stateType}</div>
                                 </div>
                             )
                         );
                     })}
-                    {
-                        renderTypingStatus()
-                    }
+                    {renderTypingStatus()}
                     <div ref={dummyDiv}></div>
                 </div>
 
@@ -172,8 +213,8 @@ export default function Home() {
                                     sendMessage();
                                 }
                             }}
-                            onFocus={() => setThinking(true)}
-                            onBlur={() => setThinking(false)}
+                            onFocus={() => setInputFocused(true)}
+                            onBlur={() => setInputFocused(false)}
                             placeholder="Type a message..."
                         />
                         <button onClick={sendMessage}>Send</button>

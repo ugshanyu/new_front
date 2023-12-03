@@ -9,17 +9,26 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
                 from: myInfo?.name, text: message, recipientUserId: currentContact.id, recipientUserName: currentContact.username,
                 messageType: 'inputTextMessage', sessionId: currentContact.sessionId, createdAt: new Date(), type: type || 'inputTextMessage',
                 isAutomated: lastAutomatedMessage != null, automatedDestination: lastAutomatedMessage?.actionId,
-                automatedMessageType: lastAutomatedMessage?.automatedMessageType
+                automatedMessageType: lastAutomatedMessage?.automatedMessageType, id: generateMessageId(myInfo?.name, currentContact.username)
             };
             webSocket.send(JSON.stringify(newMessage));
             setMessagesHook(prevMessages => ({
                 ...prevMessages,
                 [currentContact.username]: [...(prevMessages[currentContact.username] || []), newMessage]
             }), currentContact.username);
-            setMessage('');
+            setMessage(''); 
         }
     }, [message, currentContact, webSocket]);
 }
+
+function generateMessageId(fromUser, toUser) {
+    const now = new Date();
+    const formattedDate = now.toISOString()
+        .replace(/-/g, '')   // Remove dashes
+        .replace(/:/g, '')   // Remove colons
+    return `${formattedDate}_${fromUser}_${toUser}`;
+}
+
 
 export function useMessageAcknowledged(webSocket) {
     return useCallback((messageId) => {
@@ -64,7 +73,7 @@ export function typing(webSocket, currentUsername, currentContact, isTyping, set
     }
 }
 
-export function inputFocused(webSocket, currentUsername, currentContact, isThinking) {
+export function sendInputFocused(webSocket, currentUsername, currentContact, isThinking) {
     if (webSocket && currentContact && currentUsername && isThinking != null) {
         let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
         webSocket.send(JSON.stringify(object));

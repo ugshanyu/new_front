@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from "react";
 import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts) {
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages){
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
@@ -87,6 +87,21 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     }
                 }
 
+                break;
+
+            case "STATE_CHANGED":
+                if (incomingMessage.id && incomingMessage.stateType) {
+                    setMessages(prevMessages => {
+                        let updatedMessages = { ...prevMessages };
+                        let fromUserMessages = updatedMessages[incomingMessage.recipientUserName];
+                        if (fromUserMessages) {
+                            updatedMessages[incomingMessage.recipientUserName] = fromUserMessages.map(msg =>
+                                msg.id === incomingMessage.id ? { ...msg, stateType: incomingMessage.stateType } : msg
+                            );
+                        }
+                        return updatedMessages;
+                    });
+                }
                 break;
             default:
                 // Handle unknown message type

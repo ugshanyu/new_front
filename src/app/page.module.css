@@ -149,6 +149,13 @@
   /* Styles for the message text */
 }
 
+.messageStatus{
+  font-size: 9px;
+  opacity: 50%;
+  /*margin-bottom: -13px;*/
+  /*padding-bottom: 5px;*/
+}
+
 .messageTimestamp {
   font-size: 0.75rem;
   color: #999999;
@@ -159,7 +166,6 @@
 .sentMessage {
   /* Align to the right for sent messages */
   justify-content: flex-end;
-  /*text-align: right;*/
 }
 
 .receivedMessage {
