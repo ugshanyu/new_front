@@ -31,13 +31,32 @@ function generateMessageId(fromUser, toUser) {
 
 
 export function useMessageAcknowledged(webSocket) {
-    return useCallback((messageId) => {
+    return useCallback((messageId, contacts, username, stateType, from) => {
         if (webSocket && messageId) {
-            let acknowledgment = { id: messageId, isAutomated: true, automatedMessageType: 'messageReceived' };
+            let contact = contacts.find(contact => contact.username === from);
+            let acknowledgment = { id: messageId, isAutomated: true, automatedMessageType: 'messageReceived', sessionId: contact?.sessionId, recipientUserName: from, from: username, stateType: stateType};
             webSocket.send(JSON.stringify(acknowledgment));
         }
     }, [webSocket]);
 }
+
+export function useFaceToFace(webSocket) {
+    return (previousSession, currentContact) => {
+        if (webSocket && currentContact && currentContact?.username !== previousSession?.username) {
+            let object = { from: localStorage.getItem('username'), input:{sessionId: currentContact?.sessionId, previousSessionId: previousSession?.sessionId}, automatedMessageType: 'FACE_TO_FACE', isAutomated: true};
+            webSocket.send(JSON.stringify(object));
+        }
+    }
+}
+
+// export function useInWindow(webSocket) {
+//     return (currentContact, inWindow) => {
+//         if (webSocket && currentContact) {
+//             let object = { from: localStorage.getItem('username'), input:{sessionId: currentContact?.sessionId, inWindow: inWindow}, automatedMessageType: 'In_Window', isAutomated: true};
+//             webSocket.send(JSON.stringify(object));
+//         }
+//     }
+// }
 
 export function useLogin(webSocket) {
     return useCallback(() => {
@@ -59,6 +78,19 @@ export function useGetContacts(webSocket) {
             webSocket.send(JSON.stringify(object));
         }
     }, [webSocket]);
+}
+
+export function useSelectContact(setCurrentContact, faceToFace, currentContact){
+    return useCallback((newContact) => {
+        faceToFace(currentContact, newContact);
+        setCurrentContact(newContact);
+    }, [setCurrentContact, faceToFace, currentContact]);
+}
+
+export function useInWindow(faceToFace){
+    return useCallback(() => {
+        faceToFace(currentContact, null);
+    }, [faceToFace]);
 }
 
 export function bottomSimpleExport(dummyDiv){

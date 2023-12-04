@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from "react";
 import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages){
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts){
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
@@ -11,7 +11,6 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     setCurrentContact(loginContact);
                     setContacts(incomingMessage.contacts);
                     setLastAutomatedMessage(loginContact?.greetingMessage);
-                    console.log('loginContact?.greetingMessage', loginContact?.greetingMessage)
                     setMessages(prevMessages => ({
                         ...prevMessages,
                         [loginContact.username]: [...(prevMessages[loginContact.username] || []), loginContact?.greetingMessage ? loginContact?.greetingMessage : '']
@@ -34,7 +33,11 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 }
                 break;
             case 'inputTextMessage':
-                messageAcknowledged(incomingMessage.id);
+                if(currentContact && currentContact.username === incomingMessage.from) {
+                    messageAcknowledged(incomingMessage.id, contacts, localStorage.getItem('username'), "RECIPIENT_SEEN", incomingMessage.from);
+                } else {
+                    messageAcknowledged(incomingMessage.id, contacts, localStorage.getItem('username'), "RECIPIENT_RECEIVED", incomingMessage.from);
+                }
                 setMessages(prevMessages => ({
                     ...prevMessages,
                     [incomingMessage.from]: [...(prevMessages[incomingMessage.from] || []), incomingMessage]
@@ -77,25 +80,24 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 }
                 if(inputFocused !== undefined) {
                     // console.log('inputFocused', inputFocused)
-                    contacts.forEach((contact) => {
-                        if (contact.username === incomingMessage?.from) {
-                            contact.inputFocused = inputFocused;
-                        }
-                    })
+                    // contacts.forEach((contact) => {
+                    //     if (contact.username === incomingMessage?.from) {
+                    //         contact.inputFocused = inputFocused;
+                    //     }
+                    // })
                     if (currentContact?.username === incomingMessage?.from) {
                         setCurrentContact({...currentContact, inputFocused: inputFocused});
                     }
                 }
 
                 break;
-
             case "STATE_CHANGED":
                 if (incomingMessage.id && incomingMessage.stateType) {
                     setMessages(prevMessages => {
                         let updatedMessages = { ...prevMessages };
-                        let fromUserMessages = updatedMessages[incomingMessage.recipientUserName];
+                        let fromUserMessages = updatedMessages[incomingMessage.from];
                         if (fromUserMessages) {
-                            updatedMessages[incomingMessage.recipientUserName] = fromUserMessages.map(msg =>
+                            updatedMessages[incomingMessage.from] = fromUserMessages.map(msg =>
                                 msg.id === incomingMessage.id ? { ...msg, stateType: incomingMessage.stateType } : msg
                             );
                         }
@@ -103,6 +105,42 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     });
                 }
                 break;
+            case "FACE_TO_FACE":
+                // Assuming incomingMessage and incomingMessage.from are defined
+                if(incomingMessage?.input?.faceToFace !== undefined) {
+                    const username = incomingMessage.from;
+                    let copyActiveContacts = {...activeContacts};
+                    copyActiveContacts[username] = incomingMessage?.input?.faceToFace
+                    setActiveContacts(copyActiveContacts);
+
+                    setMessages(prevMessages => {
+                        let updatedMessages = { ...prevMessages };
+                        let fromUserMessages = updatedMessages[incomingMessage.from];
+                        if (fromUserMessages) {
+                            updatedMessages[incomingMessage.from] = fromUserMessages.map(msg =>
+                                msg.id === incomingMessage.id ? { ...msg, faceToFace: incomingMessage?.input?.faceToFace } : msg
+                            );
+                        }
+                        return updatedMessages;
+                    });
+                }
+                break;
+
+
+                // console.log('FACE_TO_FACE', incomingMessage)
+                // if it is comming from the current contact then we need to update the current contact
+                // if(contacts && contacts.length > 0) {
+                //     contacts.forEach((contact) => {
+                //         if (contact.username === incomingMessage?.from) {
+                //             contact.faceToFace = incomingMessage?.input?.faceToFace;
+                //         }
+                //     })
+                //     setContacts(contacts);
+                // }
+                // if (currentContact?.username === incomingMessage?.from) {
+                //     setCurrentContact({...currentContact, faceToFace: incomingMessage?.input?.faceToFace});
+                // }
+
             default:
                 // Handle unknown message type
                 console.warn('Received unknown message type:', incomingMessage.type);
