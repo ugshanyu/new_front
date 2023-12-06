@@ -49,6 +49,15 @@ export function useFaceToFace(webSocket) {
     }
 }
 
+export function useCreateNewSession(webSocket) {
+    return (listOfUsers, groupName) => {
+        if (webSocket && listOfUsers) {
+            let object = { from: localStorage.getItem('username'), input:{listOfUsers: listOfUsers, groupName: groupName}, automatedMessageType: 'CREATE_NEW_SESSION', isAutomated: true};
+            webSocket.send(JSON.stringify(object));
+        }
+    }
+}
+
 // export function useInWindow(webSocket) {
 //     return (currentContact, inWindow) => {
 //         if (webSocket && currentContact) {
@@ -110,4 +119,13 @@ export function sendInputFocused(webSocket, currentUsername, currentContact, isT
         let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
         webSocket.send(JSON.stringify(object));
     }
+}
+
+export function useFindUser(webSocket){
+    return useCallback((username) => {
+        if (webSocket && webSocket.readyState === 1) {
+            let object = {from: localStorage.getItem('username'), input:{username: username}, automatedMessageType: 'FIND_USERS', isAutomated: true };
+            webSocket.send(JSON.stringify(object));
+        }
+    }, [webSocket]);
 }

@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from "react";
 import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts){
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers){
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
@@ -30,6 +30,11 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                         ...prevMessages,
                         [lastContacted.id]: [...(prevMessages[lastContacted.id] || []), lastContacted?.greetingMessage ? lastContacted?.greetingMessage : {text:null}]
                     }));
+                } else {
+                    setCurrentContact(null);
+                    setContacts([]);
+                    setLastAutomatedMessage(null);
+                    setMessages({});
                 }
                 break;
             case 'inputTextMessage':
@@ -125,6 +130,13 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     });
                 }
                 break;
+                //findUsers
+                case "FIND_USERS":
+                    if(incomingMessage?.input?.users !== undefined) {
+                        setFindUsers(incomingMessage?.input?.users);
+                    }
+                    break;
+
 
 
                 // console.log('FACE_TO_FACE', incomingMessage)

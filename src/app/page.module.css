@@ -127,6 +127,11 @@
   color: #fecb95;
 }
 
+.activity{
+  margin-left: 10px;
+  font-weight: bold;
+}
+
 .activeContact {
   background-color: #06483c; /* Bright Blue: For hover and active states */
 }
@@ -137,12 +142,18 @@
   align-items: center;
   padding: 10px 20px;
   background: #04473a;
-  color: #0f2682;
+  color: #0262fe;
+  justify-content: space-between;
 }
 
 .activeContactHeader {
   display: flex;
   align-items: center;
+}
+
+.settings {
+  font-size: 30px;
+  cursor: pointer;
 }
 
 .messageContent {
@@ -200,6 +211,72 @@
   background-color: #a4d39d; /* Brighter background on focus for emphasis */
   color: #044035; /* Change text color on focus if needed */
 }
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modalContent {
+  width: 500px;
+  height: 700px;
+  background: #06483c;
+  padding: 20px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  /* Other styling as needed */
+}
+
+/* Animating modal on opening */
+.modalOverlay.open .modalContent {
+  transform: scale(1);
+}
+
+.searchInput {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  /* additional styles */
+}
+
+.userList {
+  /* styles for user list */
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  /* additional styles */
+}
+
+.userAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  /* additional styles */
+}
+
+.selectedUsers {
+  /* styles for selected users section */
+}
+
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  /* additional styles */
+}
+
 
 /* You might want to add media queries for responsiveness */
 

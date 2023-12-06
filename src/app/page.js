@@ -4,9 +4,10 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import styles from './page.module.css';
 import {getLogin, login} from "@/common/services/apiCalls/login"
 import {getLogoUrl} from "@/common/utils/base";
-import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScrollToBottom, ScrollToBottom, bottomSimpleExport, typing, thinkingStatus, sendInputFocused, faceToFace, useFaceToFace, useSelectContact, useInWindow} from "@/common/services/insideFunctions/useSendMessage";
+import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScrollToBottom, ScrollToBottom, bottomSimpleExport, typing, thinkingStatus, sendInputFocused, faceToFace, useFaceToFace, useSelectContact, useInWindow, useFindUser, useCreateGroup, useCreateNewSession} from "@/common/services/insideFunctions/useSendMessage";
 import process from "next/dist/build/webpack/loaders/resolve-url-loader/lib/postcss";
 import {useProcessMessage} from "@/common/services/insideFunctions/useProcessMessage";
+import {SettingsModal} from "@/component/SettingsModal";
 
 export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -22,16 +23,23 @@ export default function Home() {
     const [thinking, setThinking] = useState(false);
     const [inputFocused, setInputFocused] = useState(false);
     const [inWindow, setInWindow] = useState(true);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [currentContactMessages, setCurrentContactMessages] = useState([]);
+    const [suggestions, setSuggestions] = useState([]);
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const findUser = useFindUser(webSocket);
+    const [findUsers, setFindUsers] = useState([]);
     const currentUsername = localStorage.getItem('username');
     const myInfo = { id: 0, name: currentUsername, avatar: getLogoUrl() };
     const goLogin = useLogin(webSocket);
     const faceToFace = useFaceToFace(webSocket);
+    const createNewSession = useCreateNewSession(webSocket);
     // const inWindow = useInWindow(webSocket);
     const dummyDiv = useRef(null);
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
     const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact)
+
 
     window.addEventListener("blur", () => {
         if(inWindow){
@@ -44,18 +52,7 @@ export default function Home() {
         }
     });
 
-    // useEffect(() => {
-    //     console.log("inWindow", inWindow)
-    //     // selectContact(currentContact)
-    // }, [inWindow])
-
-    // const selectContact = useCallback((contact) => {
-    //     console.log("I am getting called")
-    //     faceToFace(currentContact, contact);
-    //     setCurrentContact(contact);
-    // }, [currentContact, faceToFace]);
-
-    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts);
+    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers)
     const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
     const typingTimer = useRef(null);
 
@@ -66,19 +63,6 @@ export default function Home() {
             setCurrentContactMessages([]);
         }
     }, [messages, currentContact]);
-
-    // useEffect(() => {
-    //     // messages[currentContact.username] = currentContactMessages
-    //     // setMessages(messages)
-    //     // messages.map(message => {
-    //     //     if (message.id === currentContact.username) {
-    //     //         return { ...message, stateType: incomingMessage.stateType };
-    //     //     }
-    //     //     return message;
-    //     // });
-    //     console.log('contacts', contacts)
-    // }, [contacts])
-
 
     useEffect(() => {
         if (webSocket) {
@@ -170,8 +154,30 @@ export default function Home() {
 
     return (
         <div className={styles.container}>
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                findUser={findUser}
+                suggestions={suggestions}
+                findUsers={findUsers}
+                selectedUsers={selectedUsers}
+                setSelectedUsers={setSelectedUsers}
+                currentContact={currentContact}
+                createNewSession={createNewSession}
+                currentUsername={currentUsername}
+            />
             <aside className={styles.sidebar}>
-                {/* You might want to add a user avatar and last message preview here */}
+                <div
+                    className={`${styles.contact}`}
+                    onClick={() => setIsSettingsModalOpen(true)}
+                >
+                    <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' className={styles.avatar} />
+                    <div className={styles.contactDetails}>
+                        <div className={styles.contactName}>
+                            {currentUsername} ➕
+                        </div>
+                    </div>
+                </div>
                 {contacts.map((contact, index) => (
                     <div
                         key={index}
@@ -192,27 +198,12 @@ export default function Home() {
                         <div className={styles.activeContactHeader}>
                             <img src={currentContact?.avatarUrl ? currentContact.avatarUrl : 'https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png'} alt={`${currentContact.firstName}'s avatar`} className={styles.avatar} />
                             <div className={styles.contactName}>{currentContact.username}</div>
-                            <div> ::: {   activeContacts[currentContact.username] ? "Face2Face" : "Online"}</div>
+                            <div className={styles.activity}> {   activeContacts[currentContact.username] ? "Face2Face" : "Online"}</div>
+
                         </div>
                     )}
+                    {currentContact && (<div className={styles.settings} onClick={() => setIsSettingsModalOpen(true)}>⚙️</div>)}
                 </header>
-                {/*<div className={styles.messages}>*/}
-                {/*    {currentContact && messages[currentContact.username]?.length > 0 && messages[currentContact.username]?.map((msg, index) => {*/}
-                {/*        const isSentMessage = msg?.from === currentUsername;*/}
-                {/*        return (*/}
-                {/*            msg.text && (*/}
-                {/*                <div key={index} className={`${styles.message} ${isSentMessage ? styles.sentMessage : styles.receivedMessage}`}>*/}
-                {/*                    <div className={styles.messageContent}>{msg.text}</div>*/}
-                {/*                    /!*<div className={styles.messageTimestamp}>{msg.timestamp}</div>*!/*/}
-                {/*                </div>*/}
-                {/*            )*/}
-                {/*        );*/}
-                {/*    })}*/}
-                {/*    {*/}
-                {/*        renderTypingStatus()*/}
-                {/*    }*/}
-                {/*    <div ref={dummyDiv}></div>*/}
-                {/*</div>*/}
                 <div className={styles.messages}>
                     {currentContactMessages.map((msg, index) => {
                         const isSentMessage = msg?.from === currentUsername;
