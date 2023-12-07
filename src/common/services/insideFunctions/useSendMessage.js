@@ -72,6 +72,7 @@ export function useLogin(webSocket) {
         if (webSocket) {
             let username = localStorage.getItem('username');
             let token = localStorage.getItem('token');
+            let userId = localStorage.getItem('userId');
             let object = { input: {username: username, token: token}, automatedMessageType: 'login', isAutomated: true };
             webSocket.send(JSON.stringify(object));
         }
@@ -89,9 +90,11 @@ export function useGetContacts(webSocket) {
     }, [webSocket]);
 }
 
-export function useSelectContact(setCurrentContact, faceToFace, currentContact){
+export function useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts){
     return useCallback((newContact) => {
-        faceToFace(currentContact, newContact);
+        if(activeContacts[newContact.username]){
+            faceToFace(currentContact, newContact);
+        }
         setCurrentContact(newContact);
     }, [setCurrentContact, faceToFace, currentContact]);
 }
@@ -109,14 +112,14 @@ export function bottomSimpleExport(dummyDiv){
 export function typing(webSocket, currentUsername, currentContact, isTyping, setWriting, isThinking) {
     if (webSocket && currentContact && currentUsername && isTyping != null) {
         setWriting(isTyping);
-        let object = { input: {isTyping: isTyping, isThinking: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
+        let object = { input: {isTyping: isTyping, isThinking: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername, recipientUserName: currentContact.username};
         webSocket.send(JSON.stringify(object));
     }
 }
 
 export function sendInputFocused(webSocket, currentUsername, currentContact, isThinking) {
     if (webSocket && currentContact && currentUsername && isThinking != null) {
-        let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername};
+        let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, from: currentUsername, recipientUserName: currentContact.username};
         webSocket.send(JSON.stringify(object));
     }
 }
