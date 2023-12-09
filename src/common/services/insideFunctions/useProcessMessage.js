@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from "react";
 import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers){
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages){
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
@@ -13,7 +13,7 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                     setLastAutomatedMessage(loginContact?.greetingMessage);
                     setMessages(prevMessages => ({
                         ...prevMessages,
-                        [loginContact.username]: [...(prevMessages[loginContact.username] || []), loginContact?.greetingMessage ? loginContact?.greetingMessage : '']
+                        [loginContact.id]: [...(prevMessages[loginContact.id] || []), loginContact?.greetingMessage ? loginContact?.greetingMessage : '']
                     }));
                 }
                 break;
@@ -38,15 +38,24 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 }
                 break;
             case 'inputTextMessage':
+                const {fromUser, toUser} =  parseMessageId(incomingMessage.id);
                 if(currentContact && currentContact.username === incomingMessage.from) {
                     messageAcknowledged(incomingMessage.id, contacts, localStorage.getItem('username'), "RECIPIENT_SEEN", incomingMessage.from);
                 } else {
                     messageAcknowledged(incomingMessage.id, contacts, localStorage.getItem('username'), "RECIPIENT_RECEIVED", incomingMessage.from);
                 }
-                setMessages(prevMessages => ({
-                    ...prevMessages,
-                    [incomingMessage.from]: [...(prevMessages[incomingMessage.from] || []), incomingMessage]
-                }));
+                if(incomingMessage?.tableType === "GroupTable"){
+                    setMessages(prevMessages => ({
+                        ...prevMessages,
+                        [toUser]: [...(prevMessages[toUser] || []), incomingMessage]
+                    }));
+                } else {
+                    setMessages(prevMessages => ({
+                        ...prevMessages,
+                        [fromUser]: [...(prevMessages[fromUser] || []), incomingMessage]
+                    }));
+                }
+
                 break;
             case 'contactUpdate':
                 // Process contact update
@@ -58,9 +67,10 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 if(incomingMessage.successfull) {
                     var userName = incomingMessage.input?.userName;
                     var temporaryToken = incomingMessage.input?.temporaryToken;
+                    var userId = incomingMessage.input?.userId;
                     localStorage.setItem('username', userName);
                     localStorage.setItem('token', temporaryToken);
-                    //reload page
+                    localStorage.setItem('userId', userId);
                     window.location.reload();
                 }
                     setMessages(prevMessages => ({
@@ -98,11 +108,12 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 break;
             case "STATE_CHANGED":
                 if (incomingMessage.id && incomingMessage.stateType) {
+                    const {fromUser, toUser} =  parseMessageId(incomingMessage.id);
                     setMessages(prevMessages => {
                         let updatedMessages = { ...prevMessages };
-                        let fromUserMessages = updatedMessages[incomingMessage.from];
+                        let fromUserMessages = updatedMessages[toUser];
                         if (fromUserMessages) {
-                            updatedMessages[incomingMessage.from] = fromUserMessages.map(msg =>
+                            updatedMessages[toUser] = fromUserMessages.map(msg =>
                                 msg.id === incomingMessage.id ? { ...msg, stateType: incomingMessage.stateType } : msg
                             );
                         }
@@ -136,7 +147,26 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                         setFindUsers(incomingMessage?.input?.users);
                     }
                     break;
-
+                case "UPDATE_MESSAGES":
+                    if(incomingMessage?.messages !== undefined) {
+                        //loop through messages
+                        incomingMessage?.messages.forEach((message) => {
+                            //parse message id
+                            const {fromUser, toUser} =  parseMessageId(message.id);
+                            //add message to messages
+                            setMessages(prevMessages => ({
+                                ...prevMessages,
+                                [message?.tableType === "GroupTable" ? toUser : fromUser]: [...(prevMessages[message?.tableType === "GroupTable" ? toUser : fromUser] || []), message]
+                            }
+                            ));
+                        })
+                        // get all ids from messages
+                        let ids = incomingMessage?.messages.map((message) => {
+                            return message.id;
+                        })
+                        messageAcknowledged(ids);
+                    }
+                    break;
 
 
                 // console.log('FACE_TO_FACE', incomingMessage)
@@ -167,5 +197,22 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
             webSocket?.removeEventListener('message', processMessage);
         }
     }, [webSocket, processMessage]);
+
+    function parseMessageId(messageId) {
+
+        const idParts = messageId.split('_');
+
+        const formattedDate = idParts[0];
+
+        const fromUser = idParts[1];
+
+        const toUser = idParts[2];
+
+        return {
+            fromUser,
+            toUser
+        };
+
+    }
 
 }

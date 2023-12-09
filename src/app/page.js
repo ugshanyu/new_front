@@ -30,6 +30,7 @@ export default function Home() {
     const findUser = useFindUser(webSocket);
     const [findUsers, setFindUsers] = useState([]);
     const currentUsername = localStorage.getItem('username');
+    const userId = localStorage.getItem('userId');
     const myInfo = { id: 0, name: currentUsername, avatar: getLogoUrl() };
     const goLogin = useLogin(webSocket);
     const faceToFace = useFaceToFace(webSocket);
@@ -52,17 +53,23 @@ export default function Home() {
         }
     });
 
-    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers)
+    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages)
     const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
     const typingTimer = useRef(null);
 
     useEffect(() => {
-        if (currentContact && messages[currentContact.username]) {
-            setCurrentContactMessages(messages[currentContact.username]);
+        if (currentContact && messages[currentContact.id]) {
+            setCurrentContactMessages(messages[currentContact.id]);
         } else {
             setCurrentContactMessages([]);
         }
     }, [messages, currentContact]);
+
+    useEffect(() => {
+        console.log("currentContact", currentContact)
+        console.log("messages", messages)
+        console.log("messages[currentContact.id]", messages[currentContact?.id])
+    }, [currentContact, messages]);
 
     useEffect(() => {
         if (webSocket) {
