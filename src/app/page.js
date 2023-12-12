@@ -40,7 +40,8 @@ export default function Home() {
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
     const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
-
+    //setUsersInfos
+    const [usersInfos, setUsersInfos] = useState([]);
 
     window.addEventListener("blur", () => {
         if(inWindow){
@@ -53,7 +54,7 @@ export default function Home() {
         }
     });
 
-    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages)
+    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages, setUsersInfos)
     const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
     const typingTimer = useRef(null);
 
@@ -64,12 +65,6 @@ export default function Home() {
             setCurrentContactMessages([]);
         }
     }, [messages, currentContact]);
-
-    useEffect(() => {
-        console.log("currentContact", currentContact)
-        console.log("messages", messages)
-        console.log("messages[currentContact.id]", messages[currentContact?.id])
-    }, [currentContact, messages]);
 
     useEffect(() => {
         if (webSocket) {
@@ -115,7 +110,7 @@ export default function Home() {
     }, [currentContactMessages, currentContact]);
 
     useEffect(() => {
-        if(activeContacts[currentContact?.username]) {
+        if(currentContact?.activityStatus === "ONLINE") {
             if (!writing && message !== '') {
                 typing(webSocket, currentUsername, currentContact, true, setWriting);
             }
@@ -136,7 +131,7 @@ export default function Home() {
 
 
     useEffect(() => {
-        if(activeContacts[currentContact?.username]) {
+        if(currentContact?.activityStatus === "ONLINE") {
             if (thinking) {
                 sendInputFocused(webSocket, currentUsername, currentContact, inputFocused);
             } else {
@@ -198,6 +193,7 @@ export default function Home() {
                         <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' alt={`${contact.firstName}'s avatar`} className={styles.avatar} />
                         <div className={styles.contactDetails}>
                             <div className={styles.contactName}>{contact.username}</div>
+                            <div className={styles.activity}> {contact.activityStatus}</div>
                         </div>
                     </div>
                 ))}
@@ -209,6 +205,7 @@ export default function Home() {
                         <div className={styles.activeContactHeader}>
                             <img src={currentContact?.avatarUrl ? currentContact.avatarUrl : 'https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png'} alt={`${currentContact.firstName}'s avatar`} className={styles.avatar} />
                             <div className={styles.contactName}>{currentContact.username}</div>
+                            <div className={styles.activity}> {currentContact?.activityStatus}</div>
                             <div className={styles.activity}> {   activeContacts[currentContact.username] ? "Face2Face" : ""}</div>
 
                         </div>

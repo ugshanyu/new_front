@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from "react";
 import {bottomSimpleExport, inputFocused, useGetContacts} from "@/common/services/insideFunctions/useSendMessage";
 
-export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages){
+export function useProcessMessage(setMessages, setCurrentContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages, setUsersInfos){
     const processMessage = useCallback((event) => {
         const incomingMessage = JSON.parse(event.data);
         switch (incomingMessage.messageType) {
@@ -142,12 +142,12 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                 }
                 break;
                 //findUsers
-                case "FIND_USERS":
+            case "FIND_USERS":
                     if(incomingMessage?.input?.users !== undefined) {
                         setFindUsers(incomingMessage?.input?.users);
                     }
                     break;
-                case "UPDATE_MESSAGES":
+                    case "UPDATE_MESSAGES":
                     if(incomingMessage?.messages !== undefined) {
                         //loop through messages
                         incomingMessage?.messages.forEach((message) => {
@@ -160,28 +160,34 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                             }
                             ));
                         })
-                        // get all ids from messages
-                        let ids = incomingMessage?.messages.map((message) => {
-                            return message.id;
-                        })
-                        messageAcknowledged(ids);
+                        let singleMessageIds = [];
+                        let groupMessageIds = [];
+                        incomingMessage?.messages.forEach(message => {
+                            if (message?.tableType === "GroupTable") {
+                                groupMessageIds.push(message.groupMessageId);
+                            } else {
+                                singleMessageIds.push(message.id);
+                            }
+                        });
+                        messageAcknowledged({singleMessageIds, groupMessageIds}, contacts, localStorage.getItem('username'), "RECIPIENT_RECEIVED", incomingMessage.from);
                     }
                     break;
-
-
-                // console.log('FACE_TO_FACE', incomingMessage)
-                // if it is comming from the current contact then we need to update the current contact
-                // if(contacts && contacts.length > 0) {
-                //     contacts.forEach((contact) => {
-                //         if (contact.username === incomingMessage?.from) {
-                //             contact.faceToFace = incomingMessage?.input?.faceToFace;
-                //         }
-                //     })
-                //     setContacts(contacts);
-                // }
-                // if (currentContact?.username === incomingMessage?.from) {
-                //     setCurrentContact({...currentContact, faceToFace: incomingMessage?.input?.faceToFace});
-                // }
+                    case "USER_ACTIVITIES":
+                        if(incomingMessage?.usersInfos !== undefined) {
+                            setUsersInfos(incomingMessage?.usersInfos);
+                        }
+                        break;
+                        case "USER_STATUS_CHANGED":
+                            console.log('USER_STATUS_CHANGED', incomingMessage)
+                            if(incomingMessage?.input?.userId !== undefined && incomingMessage?.input?.activityStatus !== undefined) {
+                                contacts.forEach((contact) => {
+                                    if (contact.id === incomingMessage?.input?.userId) {
+                                        contact.activityStatus = incomingMessage?.input?.activityStatus;
+                                    }
+                                })
+                                setContacts(contacts);
+                            }
+                            break;
 
             default:
                 // Handle unknown message type

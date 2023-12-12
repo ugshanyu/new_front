@@ -42,10 +42,9 @@ function generateMessageId(fromUser, toUser) {
 export function useMessageAcknowledged(webSocket) {
     return useCallback((messageId, contacts, username, stateType, from) => {
         if (webSocket && messageId) {
-            //if messageId is list of messageIds then send acknowledgment for all of them
             let acknowledgment;
-            if (Array.isArray(messageId)) {
-                acknowledgment = { input:{messageIds: messageId}, isAutomated: true, automatedMessageType: 'MESSAGES_RECEIVED', stateType: stateType};
+            if (typeof messageId === 'object') {
+                acknowledgment = { input:{groupMessageIds: messageId.groupMessageIds, singleMessageIds: messageId.singleMessageIds}, isAutomated: true, automatedMessageType: 'MESSAGES_RECEIVED', stateType: stateType};
             } else{
                  acknowledgment = { id: messageId, isAutomated: true, automatedMessageType: 'messageReceived', stateType: stateType};
             }
@@ -98,7 +97,7 @@ export function useGetContacts(webSocket) {
         if (webSocket) {
             let username = localStorage.getItem('username');
             let token = localStorage.getItem('token');
-            let object = { input: {username: username, token: token}, automatedMessageType: 'getContacts', isAutomated: true };
+            let object = { input: {username: username, token: token}, id: generateMessageId(localStorage.getItem("userId"), null), automatedMessageType: 'getContacts', isAutomated: true };
             webSocket.send(JSON.stringify(object));
         }
     }, [webSocket]);
@@ -126,14 +125,14 @@ export function bottomSimpleExport(dummyDiv){
 export function typing(webSocket, currentUsername, currentContact, isTyping, setWriting, isThinking) {
     if (webSocket && currentContact && currentUsername && isTyping != null) {
         setWriting(isTyping);
-        let object = { input: {isTyping: isTyping, isThinking: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, recipientUserId: currentContact.id, from: currentUsername, recipientUserName: currentContact.username};
+        let object = { id: generateMessageId(localStorage.getItem("userId"), currentContact.id), input: {isTyping: isTyping, isThinking: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, recipientUserId: currentContact.id, from: currentUsername, recipientUserName: currentContact.username};
         webSocket.send(JSON.stringify(object));
     }
 }
 
 export function sendInputFocused(webSocket, currentUsername, currentContact, isThinking) {
     if (webSocket && currentContact && currentUsername && isThinking != null) {
-        let object = { input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, recipientUserId: currentContact.id, from: currentUsername, recipientUserName: currentContact.username};
+        let object = { id: generateMessageId(localStorage.getItem("userId"), currentContact.id), input: {inputFocused: isThinking}, sessionId: currentContact.sessionId, automatedMessageType: 'TYPING', isAutomated: true, recipientUserId: currentContact.id, from: currentUsername, recipientUserName: currentContact.username};
         webSocket.send(JSON.stringify(object));
     }
 }
