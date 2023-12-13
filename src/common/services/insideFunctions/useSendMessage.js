@@ -56,7 +56,7 @@ export function useMessageAcknowledged(webSocket) {
 export function useFaceToFace(webSocket) {
     return (previousSession, currentContact) => {
         if (webSocket && currentContact && currentContact?.username !== previousSession?.username) {
-            let object = { recipientUserId: currentContact.id, from: localStorage.getItem('username'), input:{sessionId: currentContact?.sessionId, previousSessionId: previousSession?.sessionId}, automatedMessageType: 'FACE_TO_FACE', isAutomated: true};
+            let object = { id: generateMessageId(localStorage.getItem("userId"), currentContact.id), recipientUserId: currentContact.id, from: localStorage.getItem('username'), input:{sessionId: currentContact?.sessionId, previousSessionId: previousSession?.sessionId, activityStatus: previousSession?.activityStatus}, automatedMessageType: 'FACE_TO_FACE', isAutomated: true};
             webSocket.send(JSON.stringify(object));
         }
     }
@@ -105,9 +105,9 @@ export function useGetContacts(webSocket) {
 
 export function useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts){
     return useCallback((newContact) => {
-        if(activeContacts[newContact?.username]){
-            faceToFace(currentContact, newContact);
-        }
+        // if(activeContacts[newContact?.username]){
+        faceToFace(currentContact, newContact);
+        // }
         setCurrentContact(newContact);
     }, [setCurrentContact, faceToFace, currentContact]);
 }

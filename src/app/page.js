@@ -110,7 +110,7 @@ export default function Home() {
     }, [currentContactMessages, currentContact]);
 
     useEffect(() => {
-        if(currentContact?.activityStatus === "ONLINE") {
+        if(currentContact?.activityStatus === "FACE_TO_FACE") {
             if (!writing && message !== '') {
                 typing(webSocket, currentUsername, currentContact, true, setWriting);
             }
@@ -131,7 +131,7 @@ export default function Home() {
 
 
     useEffect(() => {
-        if(currentContact?.activityStatus === "ONLINE") {
+        if(currentContact?.activityStatus === "FACE_TO_FACE") {
             if (thinking) {
                 sendInputFocused(webSocket, currentUsername, currentContact, inputFocused);
             } else {

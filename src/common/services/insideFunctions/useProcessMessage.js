@@ -178,7 +178,6 @@ export function useProcessMessage(setMessages, setCurrentContact, setContacts, s
                         }
                         break;
                         case "USER_STATUS_CHANGED":
-                            console.log('USER_STATUS_CHANGED', incomingMessage)
                             if(incomingMessage?.input?.userId !== undefined && incomingMessage?.input?.activityStatus !== undefined) {
                                 contacts.forEach((contact) => {
                                     if (contact.id === incomingMessage?.input?.userId) {
