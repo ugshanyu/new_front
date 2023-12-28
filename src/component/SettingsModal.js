@@ -77,7 +77,7 @@ export function SettingsModal({ isOpen, onClose, findUser, suggestions, findUser
                     <input
                         value={groupName}
                         onChange={e => setGroupName(e.target.value)}
-                        placeholder="Enter group name"
+                        placeholder="Enter group namee"
                         style={{ width: '100%', height: '50px', fontSize: '20px' }}
                     />
                 }
