@@ -12,7 +12,14 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
                     createdAt: new Date(), messageType: 'inputTextMessage',
                     id: generateMessageId(localStorage.getItem("userId"), currentContact.id)
                 }
-            } else {
+            } else if(currentContact?.bot === true){
+                newMessage = {
+                    from: myInfo?.name, recipientUserId: currentContact.id, text: message, isAutomated: true, 
+                    automatedMessageType: "BOT_MESSAGE", createdAt: new Date(), messageType: 'inputTextMessage',
+                    id: generateMessageId(localStorage.getItem("userId"), currentContact.id)
+                }
+            }
+            else {
                 newMessage = {
                     from: myInfo?.name, text: message, recipientUserId: currentContact.id, recipientUserName: currentContact.username,
                     messageType: 'inputTextMessage', sessionId: currentContact.sessionId, createdAt: new Date(), type: type || 'inputTextMessage',
@@ -20,7 +27,11 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
                     automatedMessageType: lastAutomatedMessage?.automatedMessageType, id: generateMessageId(localStorage.getItem("userId"), currentContact.id)
                 };
             }
-            webSocket.send(JSON.stringify(newMessage));
+            if(currentContact?.bot === true){
+                transcribeAndDisplayText(message, currentContact, setMessagesHook)
+            } else {
+                webSocket.send(JSON.stringify(newMessage));
+            }
             setMessagesHook(prevMessages => ({
                 ...prevMessages,
                 [currentContact.id]: [...(prevMessages[currentContact.id] || []), newMessage]
@@ -144,4 +155,54 @@ export function useFindUser(webSocket){
             webSocket.send(JSON.stringify(object));
         }
     }, [webSocket]);
+}
+
+async function transcribeAndDisplayText(text, currentContact, setMessagesHook) {
+    const formData = new FormData();
+    formData.append('text', text);
+
+    try {
+        const transcriptionResponse = await fetch("http://127.0.0.1:5001/upload_text", {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!transcriptionResponse.ok) {
+            throw new Error(`Error: ${transcriptionResponse.status}`);
+        }
+        const responseData = await transcriptionResponse.json();
+        const transcription = responseData.transcription;
+        const synthesizedAudioBase64 = responseData?.synthesized_audio;
+        const generated = responseData.generated;
+        if(synthesizedAudioBase64){
+            const audioBlobResponse = base64ToBlob(synthesizedAudioBase64, 'audio/ogg');
+            const audioUrl = URL.createObjectURL(audioBlobResponse);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        }
+
+        // Create an audio element and set its source
+
+
+        // Function to convert Base64 to Blob
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], {type: mimeType});
+        }
+        // Insert the response data into the body of the document
+        const newMessage = {from:currentContact.username, messageType: "inputTextMessage", text: generated}
+
+        setMessagesHook(prevMessages => ({
+            ...prevMessages,
+            [currentContact.id]: [...(prevMessages[currentContact.id] || []), newMessage]
+        }));
+    } catch (error) {
+        console.error('An error occurred:', error);
+        // document.body.textContent = 'Error fetching transcription data';
+    }
 }

@@ -8,6 +8,7 @@ import {useLogin, useSendMessage, useGetContacts, useMessageAcknowledged, useScr
 import process from "next/dist/build/webpack/loaders/resolve-url-loader/lib/postcss";
 import {useProcessMessage} from "@/common/services/insideFunctions/useProcessMessage";
 import {SettingsModal} from "@/component/SettingsModal";
+import { useReactMediaRecorder } from "react-media-recorder";
 
 export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -42,6 +43,109 @@ export default function Home() {
     const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
     //setUsersInfos
     const [usersInfos, setUsersInfos] = useState([]);
+    const [isRecording, setIsRecording] = useState(false);
+    const [showInputField, setShowInputField] = useState(false);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [audioChunks, setAudioChunks] = useState([]);
+    const {
+        status,
+        startRecording,
+        stopRecording,
+        pauseRecording,
+        mediaBlobUrl
+      } = useReactMediaRecorder({
+        video: false,
+        audio: true,
+        echoCancellation: true
+      });
+
+      const handleStartRecording = () => {
+        setIsRecording(true)
+        startRecording()
+      }
+      
+      const handleStopRecording = () => {
+        setIsRecording(false)
+        stopRecording();
+        // downloadAudio();
+    };
+
+    useEffect(() => {
+        const sendAudioForTranscription = async () => {
+            if (mediaBlobUrl) {
+                try {
+                    // Fetch the audio blob from the blob URL
+                    const response = await fetch(mediaBlobUrl);
+                    const audioBlob = await response.blob();
+
+                    // Prepare the audio blob for sending
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'recording.ogg');
+
+                    // Send the audio file to your Flask API
+                    const transcriptionResponse = await fetch("http://127.0.0.1:5001/upload_audio", {
+                        method: 'POST',
+                        body: formData,
+                        // The 'Content-Type' header is set automatically by FormData
+                    });
+
+                    if (!transcriptionResponse.ok) {
+                        throw new Error(`Error: ${transcriptionResponse.status}`);
+                    }
+
+                    // const transcriptionText = await transcriptionResponse.text();
+                    // const parsed = JSON.parse(transcriptionText);
+
+                    const responseData = await transcriptionResponse.json();
+
+                    // Assuming the JSON object has 'transcription' and 'synthesized_audio' fields
+                    const transcription = responseData.transcription;
+                    const synthesizedAudioBase64 = responseData?.synthesized_audio;
+                    const generated = responseData.generated;
+
+                    if(synthesizedAudioBase64){
+                        // Convert Base64 to Blob
+                        const audioBlobResponse = base64ToBlob(synthesizedAudioBase64, 'audio/ogg');
+                        const audioUrl = URL.createObjectURL(audioBlobResponse);
+
+                        // Create an audio element and set its source
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    }
+
+                    // Function to convert Base64 to Blob
+                    function base64ToBlob(base64, mimeType) {
+                        const byteCharacters = atob(base64);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        return new Blob([byteArray], {type: mimeType});
+                    }
+
+                    const newMessage = {from:currentUsername, messageType: "inputTextMessage", text: transcription}
+
+                    setMessages(prevMessages => ({
+                        ...prevMessages,
+                        [currentContact.id]: [...(prevMessages[currentContact.id] || []), newMessage]
+                    }));
+
+                    const generatedMessage = {from:'sever', messageType: "inputTextMessage", text: generated}
+
+                    setMessages(prevMessages => ({
+                        ...prevMessages,
+                        [currentContact.id]: [...(prevMessages[currentContact.id] || []), generatedMessage]
+                    }));
+
+                } catch (error) {
+                    console.error('Error during transcription:', error);
+                }
+            }
+        };
+
+        sendAudioForTranscription();
+    }, [mediaBlobUrl]);
 
     window.addEventListener("blur", () => {
         if(inWindow){
@@ -55,7 +159,7 @@ export default function Home() {
     });
 
     const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages, setUsersInfos)
-    const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage);
+    const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage, processMessage);
     const typingTimer = useRef(null);
 
     useEffect(() => {
@@ -157,6 +261,16 @@ export default function Home() {
         }
     }
 
+    const handleSendMessage = () => {
+        
+        if(currentContact.bot){
+            console.log('sendMessage')
+            // sendMessageToBot()
+        } else{
+            sendMessage()
+        }
+    }
+
 
     return (
         <div className={styles.container}>
@@ -177,7 +291,7 @@ export default function Home() {
                     className={`${styles.contact}`}
                     onClick={() => setIsSettingsModalOpen(true)}
                 >
-                    <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' className={styles.avatar} />
+                    <img src='https://i.postimg.cc/KKhdzjM9/me.jpg' className={styles.avatar} />
                     <div className={styles.contactDetails}>
                         <div className={styles.contactName}>
                             {currentUsername} ➕
@@ -193,7 +307,7 @@ export default function Home() {
                         <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' alt={`${contact.firstName}'s avatar`} className={styles.avatar} />
                         <div className={styles.contactDetails}>
                             <div className={styles.contactName}>{contact.username}</div>
-                            <div className={styles.activity}> {contact.activityStatus}</div>
+                            {/* <div className={styles.activity}> {contact.activityStatus}</div> */}
                         </div>
                     </div>
                 ))}
@@ -205,9 +319,8 @@ export default function Home() {
                         <div className={styles.activeContactHeader}>
                             <img src={currentContact?.avatarUrl ? currentContact.avatarUrl : 'https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png'} alt={`${currentContact.firstName}'s avatar`} className={styles.avatar} />
                             <div className={styles.contactName}>{currentContact.username}</div>
-                            <div className={styles.activity}> {currentContact?.activityStatus}</div>
-                            <div className={styles.activity}> {   activeContacts[currentContact.username] ? "Face2Face" : ""}</div>
-
+                            {/* <div className={styles.activity}> {currentContact?.activityStatus}</div> */}
+                            {/* <div className={styles.activity}> {   activeContacts[currentContact.username] ? "Face2Face" : ""}</div> */}
                         </div>
                     )}
                     {currentContact && (<div className={styles.settings} onClick={() => setIsSettingsModalOpen(true)}>⚙️</div>)}
@@ -227,24 +340,61 @@ export default function Home() {
                     {renderTypingStatus()}
                     <div ref={dummyDiv}></div>
                 </div>
-                {currentContact && (
-                    <div className={styles.messageInput}>
-                        <input
-                            type="text"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    sendMessage();
-                                }
+                <div>
+            {currentContact && (
+                <>
+                {
+                    !showInputField && (
+                        <div className={styles.messageInput} style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+                            <button
+                            onMouseDown={handleStartRecording}
+                            onMouseUp={handleStopRecording}
+                            disabled={showInputField}
+                            style={{
+                                width: "80px",
+                                marginRight: "10px",
+                                fontSize: "55px",
+                                padding: "3px",
+                                backgroundColor: isRecording ? 'red' : '#06483c', // Red background when recording
+                                color: isRecording ? 'white' : 'black', // White text when recording
+                                // border: isRecording ? 'none' : 'none', // No border when recording
+                                transition: 'all 0.3s ease' // Smooth transition for the color change
                             }}
-                            onFocus={() => setInputFocused(true)}
-                            onBlur={() => setInputFocused(false)}
-                            placeholder="Type a message..."
-                        />
-                        <button onClick={sendMessage}>Send</button>
-                    </div>
-                )}
+                            >
+                                🎙️
+                                {/* {isRecording ? "Recording..." : "Record"} */}
+                            </button>
+                            <button 
+                                onClick={() => setShowInputField(true)}
+                                style={{width:"80px", fontSize:"55px", padding: "3px"}}
+                            >
+                            ⌨️
+                            </button>
+                        </div>
+                    )
+                }
+                    {showInputField && (
+                        <div className={styles.messageInput}>
+                            <button onClick={() => setShowInputField(false)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '10px', marginRight: '5px', fontSize: '20px' }}>
+                            ⬅️
+                            </button>
+                            <input
+                                type="text"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        sendMessage();
+                                    }
+                                }}
+                                placeholder="Type a message..."
+                            />
+                            <button onClick={sendMessage}>Send</button>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
             </main>
         </div>
     );
