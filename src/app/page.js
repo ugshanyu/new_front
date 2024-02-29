@@ -9,12 +9,15 @@ import process from "next/dist/build/webpack/loaders/resolve-url-loader/lib/post
 import {useProcessMessage} from "@/common/services/insideFunctions/useProcessMessage";
 import {SettingsModal} from "@/component/SettingsModal";
 import { useReactMediaRecorder } from "react-media-recorder";
+import io from 'socket.io-client';
+
 
 export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
-    const [contacts, setContacts] = useState([]);
-    const [activeContacts, setActiveContacts] = useState({});
-    const [currentContact, setCurrentContact] = useState(null);
+    const [contacts, setContacts] = useState([{id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}]);
+    // const [contacts, setContacts] = useState([{username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}, {username:"Хан-Уул", avatarUrl:"https://khanuul.mn/wp-content/uploads/2021/03/tom-logo.png"}, {username:"Сумъяабазар", avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8d/Portrait_Sumiyabazar.jpg"}]);
+    const [activeContacts, setActiveContacts] = useState(null);
+    const [currentContact, setCurrentContact] = useState({id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"});
     const [messages, setMessages] = useState({});
     const [message, setMessage] = useState('');
     const [webSocket, setWebSocket] = useState(null);
@@ -40,13 +43,18 @@ export default function Home() {
     const dummyDiv = useRef(null);
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
-    const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
+    // const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
     //setUsersInfos
     const [usersInfos, setUsersInfos] = useState([]);
-    const [isRecording, setIsRecording] = useState(false);
-    const [showInputField, setShowInputField] = useState(false);
+    // const [isRecording, setIsRecording] = useState(false);
+    const [showInputField, setShowInputField] = useState(true);
     const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [socket, setSocket] = useState(null);
     const [audioChunks, setAudioChunks] = useState([]);
+    const [partialMessage, setPartialMessage] = useState('');
+    const [previosMessage, setPreviosMessage] = useState('');
+    const [messageEnd, setMessageEnd] = useState(true);
+
     const {
         status,
         startRecording,
@@ -59,107 +67,34 @@ export default function Home() {
         echoCancellation: true
       });
 
-      const handleStartRecording = () => {
-        setIsRecording(true)
-        startRecording()
-      }
-      
-      const handleStopRecording = () => {
-        setIsRecording(false)
-        stopRecording();
-        // downloadAudio();
-    };
+    //set the current contact to the first contact in the list
+    useEffect(() => {
+        if (contacts.length > 0 && !currentContact) {
+            console.log("we are the champions", contacts[0])
+            setCurrentContact(contacts[0]);
+        }
+    }, [contacts]);
 
     useEffect(() => {
-        const sendAudioForTranscription = async () => {
-            if (mediaBlobUrl) {
-                try {
-                    // Fetch the audio blob from the blob URL
-                    const response = await fetch(mediaBlobUrl);
-                    const audioBlob = await response.blob();
-
-                    // Prepare the audio blob for sending
-                    const formData = new FormData();
-                    formData.append('file', audioBlob, 'recording.ogg');
-
-                    // Send the audio file to your Flask API
-                    const transcriptionResponse = await fetch("http://127.0.0.1:5001/upload_audio", {
-                        method: 'POST',
-                        body: formData,
-                        // The 'Content-Type' header is set automatically by FormData
-                    });
-
-                    if (!transcriptionResponse.ok) {
-                        throw new Error(`Error: ${transcriptionResponse.status}`);
-                    }
-
-                    // const transcriptionText = await transcriptionResponse.text();
-                    // const parsed = JSON.parse(transcriptionText);
-
-                    const responseData = await transcriptionResponse.json();
-
-                    // Assuming the JSON object has 'transcription' and 'synthesized_audio' fields
-                    const transcription = responseData.transcription;
-                    const synthesizedAudioBase64 = responseData?.synthesized_audio;
-                    const generated = responseData.generated;
-
-                    if(synthesizedAudioBase64){
-                        // Convert Base64 to Blob
-                        const audioBlobResponse = base64ToBlob(synthesizedAudioBase64, 'audio/ogg');
-                        const audioUrl = URL.createObjectURL(audioBlobResponse);
-
-                        // Create an audio element and set its source
-                        const audio = new Audio(audioUrl);
-                        audio.play();
-                    }
-
-                    // Function to convert Base64 to Blob
-                    function base64ToBlob(base64, mimeType) {
-                        const byteCharacters = atob(base64);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const byteArray = new Uint8Array(byteNumbers);
-                        return new Blob([byteArray], {type: mimeType});
-                    }
-
-                    const newMessage = {from:currentUsername, messageType: "inputTextMessage", text: transcription}
-
-                    setMessages(prevMessages => ({
-                        ...prevMessages,
-                        [currentContact.id]: [...(prevMessages[currentContact.id] || []), newMessage]
-                    }));
-
-                    const generatedMessage = {from:'sever', messageType: "inputTextMessage", text: generated}
-
-                    setMessages(prevMessages => ({
-                        ...prevMessages,
-                        [currentContact.id]: [...(prevMessages[currentContact.id] || []), generatedMessage]
-                    }));
-
-                } catch (error) {
-                    console.error('Error during transcription:', error);
-                }
+        if(partialMessage && messageEnd){
+            setPartialMessage('')
+            setMessageEnd(true)
+            //if partial message is only one word and its length is more that 30 then skip the message
+            if(partialMessage.split(' ').length === 1 && partialMessage.length > 30){
+                return
             }
-        };
-
-        sendAudioForTranscription();
-    }, [mediaBlobUrl]);
-
-    window.addEventListener("blur", () => {
-        if(inWindow){
-            setInWindow(false)
+            setMessages(prevMessages => ({...prevMessages, [currentContact.id]: [...prevMessages[currentContact.id], {from: currentContact.id, text: partialMessage}]}));
         }
-    });
-    window.addEventListener("focus", () => {
-        if(!inWindow){
-            setInWindow(true)
-        }
-    });
+    }, [messageEnd]);
 
-    const processMessage = useProcessMessage(setMessages, selectContact, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages, setUsersInfos)
-    const sendMessage = useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessages, lastAutomatedMessage, processMessage);
+
+    useEffect(() => {
+        console.log("currentContactId", currentContact)
+    }, [currentContact]);
+
+
+    const processMessage = useProcessMessage(setMessages, null, setContacts, setLastAutomatedMessage, webSocket, goLogin, getContacts, messageAcknowledged, currentContact, contacts, currentContactMessages, setCurrentContactMessages, activeContacts, setActiveContacts, setFindUsers, messages, setUsersInfos)
+    const sendMessage = useSendMessage(myInfo, message, socket, currentContact, setMessage, setMessages, lastAutomatedMessage, processMessage);
     const typingTimer = useRef(null);
 
     useEffect(() => {
@@ -171,31 +106,33 @@ export default function Home() {
     }, [messages, currentContact]);
 
     useEffect(() => {
-        if (webSocket) {
-            return;
-        } else {
-            const ws = new WebSocket('ws://localhost:8080/chat');
-            ws.onopen = () => {
-                console.log('Connected to the chat server');
-                setWsConnected(true);
-            }
-            ws.onmessage = processMessage;
-            ws.onclose = () => {
-                console.log('Disconnected from the chat server');
-                setWsConnected(false);
-            }
-            setWebSocket(ws);
-        }
-        return () => {
-            webSocket?.close();
-        }
-    }, [webSocket, processMessage, goLogin]);
+        const newSocket = io('https://k47s99y875vbjw-8080.proxy.runpod.net/');
 
-    useEffect(() => {
-        if (webSocket && wsConnected) {
-            getContacts();
-        }
-    }, [webSocket, wsConnected, goLogin]);
+        newSocket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        newSocket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+
+        // Event handler for receiving a message
+        newSocket.on('my_response', (data) => {
+            setMessageEnd(false);
+            if (data.data === '<end>') {
+                setMessageEnd(true);
+            } else {
+                setPartialMessage((prevPartialMessage) => prevPartialMessage + data.data);
+            }
+            bottomSimpleExport(dummyDiv);
+        });
+
+        setSocket(newSocket);
+
+        return () => {
+            newSocket.close();
+        };
+    }, []);
 
     useEffect(() => {
         const savedMessages = localStorage.getItem('messages');
@@ -204,6 +141,10 @@ export default function Home() {
         }
     }, []);
 
+    useEffect(() => {
+        console.log('messages', messages);
+    } , [messages]);
+
     // Save messages to localStorage whenever they change
     useEffect(() => {
         localStorage.setItem('messages', JSON.stringify(messages));
@@ -211,55 +152,8 @@ export default function Home() {
 
     useEffect(() => {
         bottomSimpleExport(dummyDiv);
-    }, [currentContactMessages, currentContact]);
+    }, [currentContactMessages, currentContact, messages]);
 
-    useEffect(() => {
-        if(currentContact?.activityStatus === "FACE_TO_FACE") {
-            if (!writing && message !== '') {
-                typing(webSocket, currentUsername, currentContact, true, setWriting);
-            }
-            if (message !== '') {
-                typingTimer.current = setTimeout(() => {
-                    typing(webSocket, currentUsername, currentContact, false, setWriting);
-                }, 1000);
-                if (!thinking) {
-                    setThinking(true)
-                }
-            } else {
-                setThinking(false)
-                typing(webSocket, currentUsername, currentContact, false, setWriting);
-            }
-            return () => clearTimeout(typingTimer.current);
-        }
-    }, [message]);
-
-
-    useEffect(() => {
-        if(currentContact?.activityStatus === "FACE_TO_FACE") {
-            if (thinking) {
-                sendInputFocused(webSocket, currentUsername, currentContact, inputFocused);
-            } else {
-                sendInputFocused(webSocket, currentUsername, currentContact, false);
-            }
-        }
-    },[inputFocused, thinking]);
-
-    //focused is false then thinking is false
-    //if focused is true and writing is true then writing is true
-    //if focused is true and writing is false then thinking is true
-    const renderTypingStatus = () => {
-        // console.log("currentContact?.inputFocused", currentContact?.inputFocused)
-        // console.log("currentContact?.typing", currentContact?.typing)
-        if(currentContact?.inputFocused) {
-            if(currentContact?.typing) {
-                return <div className={styles.typing}>Typing...</div>
-            } else {
-                return <div className={styles.typing}>Thinking...</div>
-            }
-        } else {
-            return null;
-        }
-    }
 
     const handleSendMessage = () => {
         
@@ -287,24 +181,14 @@ export default function Home() {
                 currentUsername={currentUsername}
             />
             <aside className={styles.sidebar}>
-                <div
-                    className={`${styles.contact}`}
-                    onClick={() => setIsSettingsModalOpen(true)}
-                >
-                    <img src='https://i.postimg.cc/KKhdzjM9/me.jpg' className={styles.avatar} />
-                    <div className={styles.contactDetails}>
-                        <div className={styles.contactName}>
-                            {currentUsername} ➕
-                        </div>
-                    </div>
-                </div>
                 {contacts.map((contact, index) => (
                     <div
                         key={index}
-                        className={`${styles.contact} ${currentContact.username === contact.username ? styles.activeContact : ''}`}
+                        className={`${styles.contact} ${currentContact?.username === contact.username ? styles.activeContact : ''}`}
                         onClick={() => selectContact(contact)}
                     >
-                        <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' alt={`${contact.firstName}'s avatar`} className={styles.avatar} />
+                        {/* <img src='https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png' alt={`${contact.firstName}'s avatar`} className={styles.avatar} /> */}
+                        {contact.avatarUrl ? <img src={contact.avatarUrl} alt={`${contact.username}'s avatar`} className={styles.avatar} /> : null}
                         <div className={styles.contactDetails}>
                             <div className={styles.contactName}>{contact.username}</div>
                             {/* <div className={styles.activity}> {contact.activityStatus}</div> */}
@@ -318,66 +202,36 @@ export default function Home() {
                     {currentContact && (
                         <div className={styles.activeContactHeader}>
                             <img src={currentContact?.avatarUrl ? currentContact.avatarUrl : 'https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png'} alt={`${currentContact.firstName}'s avatar`} className={styles.avatar} />
-                            <div className={styles.contactName}>{currentContact.username}</div>
+                            <div className={styles.contactName}>{currentContact?.username}</div>
                             {/* <div className={styles.activity}> {currentContact?.activityStatus}</div> */}
                             {/* <div className={styles.activity}> {   activeContacts[currentContact.username] ? "Face2Face" : ""}</div> */}
                         </div>
                     )}
-                    {currentContact && (<div className={styles.settings} onClick={() => setIsSettingsModalOpen(true)}>⚙️</div>)}
+                    {/* {currentContact && (<div className={styles.settings} onClick={() => setIsSettingsModalOpen(true)}>⚙️</div>)} */}
                 </header>
                 <div className={styles.messages}>
                     {currentContactMessages.map((msg, index) => {
                         const isSentMessage = msg?.from === currentUsername;
                         return (
-                            msg.text && (
+                            msg?.text && (
                                 <div key={index} className={`${styles.message} ${isSentMessage ? styles.sentMessage : styles.receivedMessage}`}>
                                     <div className={styles.messageContent}>{msg.text}</div>
-                                    <div className={styles.messageStatus}>{msg?.stateType}</div>
                                 </div>
                             )
                         );
                     })}
-                    {renderTypingStatus()}
+                    {partialMessage && (
+                        <div className={styles.message + ' ' + styles.receivedMessage}>
+                            <div className={styles.messageContent}>{partialMessage}</div>
+                        </div>
+                    )}
                     <div ref={dummyDiv}></div>
                 </div>
                 <div>
-            {currentContact && (
+            {currentContact && messageEnd == true && (
                 <>
-                {
-                    !showInputField && (
-                        <div className={styles.messageInput} style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                            <button
-                            onMouseDown={handleStartRecording}
-                            onMouseUp={handleStopRecording}
-                            disabled={showInputField}
-                            style={{
-                                width: "80px",
-                                marginRight: "10px",
-                                fontSize: "55px",
-                                padding: "3px",
-                                backgroundColor: isRecording ? 'red' : '#06483c', // Red background when recording
-                                color: isRecording ? 'white' : 'black', // White text when recording
-                                // border: isRecording ? 'none' : 'none', // No border when recording
-                                transition: 'all 0.3s ease' // Smooth transition for the color change
-                            }}
-                            >
-                                🎙️
-                                {/* {isRecording ? "Recording..." : "Record"} */}
-                            </button>
-                            <button 
-                                onClick={() => setShowInputField(true)}
-                                style={{width:"80px", fontSize:"55px", padding: "3px"}}
-                            >
-                            ⌨️
-                            </button>
-                        </div>
-                    )
-                }
                     {showInputField && (
                         <div className={styles.messageInput}>
-                            <button onClick={() => setShowInputField(false)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '10px', marginRight: '5px', fontSize: '20px' }}>
-                            ⬅️
-                            </button>
                             <input
                                 type="text"
                                 value={message}

@@ -1,10 +1,10 @@
 // useSendMessage.js
 import {useCallback, useEffect, useRef} from 'react';
 
-export function useSendMessage(myInfo, message, webSocket, currentContact, setMessage, setMessagesHook, lastAutomatedMessage, type, bottomSimpleExport) {
+export function useSendMessage(myInfo, message, socket, currentContact, setMessage, setMessagesHook, lastAutomatedMessage, type, bottomSimpleExport) {
     return useCallback(() => {
         // console.log('useSendMessage', scrollToBottom);
-        if (message && currentContact && webSocket) {
+        if (message && currentContact) {
             let newMessage;
             if(currentContact?.tableType === 'GroupTable') {
                 newMessage = {
@@ -30,7 +30,7 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
             if(currentContact?.bot === true){
                 transcribeAndDisplayText(message, currentContact, setMessagesHook)
             } else {
-                webSocket.send(JSON.stringify(newMessage));
+                socket.emit('my_event', {'data': message});
             }
             setMessagesHook(prevMessages => ({
                 ...prevMessages,
@@ -38,7 +38,7 @@ export function useSendMessage(myInfo, message, webSocket, currentContact, setMe
             }), currentContact.id);
             setMessage(''); 
         }
-    }, [message, currentContact, webSocket]);
+    }, [message, currentContact, socket]);
 }
 
 function generateMessageId(fromUser, toUser) {
@@ -115,12 +115,12 @@ export function useGetContacts(webSocket) {
 }
 
 export function useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts){
-    return useCallback((newContact) => {
-        // if(activeContacts[newContact?.username]){
-        faceToFace(currentContact, newContact);
-        // }
-        setCurrentContact(newContact);
-    }, [setCurrentContact, faceToFace, currentContact]);
+    // return useCallback((newContact) => {
+    //     // if(activeContacts[newContact?.username]){
+    //     faceToFace(currentContact, newContact);
+    //     // }
+    //     setCurrentContact(newContact);
+    // }, [setCurrentContact, faceToFace, currentContact]);
 }
 
 export function useInWindow(faceToFace){
