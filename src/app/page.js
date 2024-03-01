@@ -14,10 +14,9 @@ import io from 'socket.io-client';
 
 export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
-    const [contacts, setContacts] = useState([{id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}]);
-    // const [contacts, setContacts] = useState([{username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}, {username:"Хан-Уул", avatarUrl:"https://khanuul.mn/wp-content/uploads/2021/03/tom-logo.png"}, {username:"Сумъяабазар", avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8d/Portrait_Sumiyabazar.jpg"}]);
+    const [contacts, setContacts] = useState([{id:"Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}, {id:"transparent", username:"Шилэн", avatarUrl:"https://i.ibb.co/x3PNBTt/big.png"}]);
     const [activeContacts, setActiveContacts] = useState(null);
-    const [currentContact, setCurrentContact] = useState({id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"});
+    const [currentContact, setCurrentContact] = useState();
     const [messages, setMessages] = useState({});
     const [message, setMessage] = useState('');
     const [webSocket, setWebSocket] = useState(null);
@@ -43,7 +42,7 @@ export default function Home() {
     const dummyDiv = useRef(null);
     const messageAcknowledged = useMessageAcknowledged(webSocket);
     const getContacts = useGetContacts(webSocket);
-    // const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
+    const selectContact = useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts)
     //setUsersInfos
     const [usersInfos, setUsersInfos] = useState([]);
     // const [isRecording, setIsRecording] = useState(false);
@@ -89,7 +88,10 @@ export default function Home() {
 
 
     useEffect(() => {
-        console.log("currentContactId", currentContact)
+        if(currentContact != null && currentContact.id == "transparent" && messages[currentContact.id] == null){
+            console.log('currentContactMessages', currentContactMessages)
+            setMessages(prevMessages => ({...prevMessages, [currentContact.id]: [{from: currentContact.id, text: "Сайн байна уу? Хотын газар олголттой холбоотой нээлттэй мэдээллээс та асуулт асууна уу?"}]}));
+        }
     }, [currentContact]);
 
 
@@ -106,7 +108,7 @@ export default function Home() {
     }, [messages, currentContact]);
 
     useEffect(() => {
-        const newSocket = io('https://k47s99y875vbjw-8080.proxy.runpod.net/');
+        const newSocket = io('https://63hno3drs1cwmf-8080.proxy.runpod.net/');
 
         newSocket.on('connect', () => {
             console.log('Connected to server');

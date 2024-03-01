@@ -30,7 +30,7 @@ export function useSendMessage(myInfo, message, socket, currentContact, setMessa
             if(currentContact?.bot === true){
                 transcribeAndDisplayText(message, currentContact, setMessagesHook)
             } else {
-                socket.emit('my_event', {'data': message});
+                socket.emit('my_event', {'data': message, 'id': currentContact.id});
             }
             setMessagesHook(prevMessages => ({
                 ...prevMessages,
@@ -115,12 +115,12 @@ export function useGetContacts(webSocket) {
 }
 
 export function useSelectContact(setCurrentContact, faceToFace, currentContact, activeContacts){
-    // return useCallback((newContact) => {
-    //     // if(activeContacts[newContact?.username]){
-    //     faceToFace(currentContact, newContact);
-    //     // }
-    //     setCurrentContact(newContact);
-    // }, [setCurrentContact, faceToFace, currentContact]);
+    return useCallback((newContact) => {
+        // if(activeContacts[newContact?.username]){
+        faceToFace(currentContact, newContact);
+        // }
+        setCurrentContact(newContact);
+    }, [setCurrentContact, faceToFace, currentContact]);
 }
 
 export function useInWindow(faceToFace){
