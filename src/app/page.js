@@ -14,7 +14,7 @@ import io from 'socket.io-client';
 
 export default function Home() {
     const [loggedIn, setLoggedIn] = useState(false);
-    const [contacts, setContacts] = useState([{id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}]);
+    const [contacts, setContacts] = useState([{id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}, {id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}]);
     // const [contacts, setContacts] = useState([{username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"}, {username:"Хан-Уул", avatarUrl:"https://khanuul.mn/wp-content/uploads/2021/03/tom-logo.png"}, {username:"Сумъяабазар", avatarUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8d/Portrait_Sumiyabazar.jpg"}]);
     const [activeContacts, setActiveContacts] = useState(null);
     const [currentContact, setCurrentContact] = useState({id: "Usion", username:"Usion", avatarUrl:"https://i.ibb.co/fnfKddK/DALL-E-2023-11-20-11-35-35-A-modern-and-vibrant-logo-for-a-super-chat-application-called-Super-Conne.png"});
