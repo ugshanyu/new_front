@@ -108,7 +108,8 @@ export default function Home() {
     }, [messages, currentContact]);
 
     useEffect(() => {
-        const newSocket = io('https://63hno3drs1cwmf-8080.proxy.runpod.net/');
+        const newSocket = io('https://50mn4bkwpgwrwv-8080.proxy.runpod.net/');
+
 
         newSocket.on('connect', () => {
             console.log('Connected to server');
